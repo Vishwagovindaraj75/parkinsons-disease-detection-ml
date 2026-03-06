@@ -1,6 +1,5 @@
 streamlit
 tensorflow==2.19.0
-keras
 numpy
 pandas
 opencv-python-headless
