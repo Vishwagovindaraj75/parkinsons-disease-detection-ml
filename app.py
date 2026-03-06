@@ -2,16 +2,28 @@ import streamlit as st
 import numpy as np
 import cv2
 import librosa
+import os
 import tempfile
 from tensorflow.keras.models import load_model
 from PIL import Image
 from audiorecorder import audiorecorder
 
+# ----------------------------
+# Page configuration
+# ----------------------------
 st.set_page_config(page_title="Parkinson Detection AI", layout="wide")
 
-# -----------------------------
-# Load models safely
-# -----------------------------
+st.title("🧠 AI-Based Parkinson’s Multi-Modal Detection System")
+st.write("Speech + Spiral + Handwriting Analysis")
+
+# ----------------------------
+# Show files in directory (debug)
+# ----------------------------
+st.write("Files available in repo:", os.listdir())
+
+# ----------------------------
+# Load models
+# ----------------------------
 @st.cache_resource
 def load_models():
 
@@ -21,42 +33,30 @@ def load_models():
 
     try:
         speech_model = load_model("fusion_model.keras", compile=False)
-    except:
-        st.warning("Speech model not found")
+        st.success("Speech model loaded")
+    except Exception as e:
+        st.warning(f"Speech model error: {e}")
 
     try:
         spiral_model = load_model("spiral_model.h5", compile=False)
-    except:
-        st.warning("Spiral model not found")
+        st.success("Spiral model loaded")
+    except Exception as e:
+        st.warning(f"Spiral model error: {e}")
 
     try:
         handwriting_model = load_model("handwriting_model.keras", compile=False)
-    except:
-        st.warning("Handwriting model not found")
+        st.success("Handwriting model loaded")
+    except Exception as e:
+        st.warning(f"Handwriting model error: {e}")
 
     return speech_model, spiral_model, handwriting_model
 
 
 speech_model, spiral_model, handwriting_model = load_models()
 
-# -----------------------------
-# Title
-# -----------------------------
-st.title("🧠 AI-Based Parkinson’s Multi-Modal Detection System")
-st.subheader("Speech + Spiral + Handwriting Analysis")
-
-st.write(
-"""
-This AI system detects Parkinson’s Disease using three inputs:
-- 🎤 Speech analysis
-- 🌀 Spiral drawing analysis
-- ✍️ Handwriting analysis
-"""
-)
-
-# =============================
+# =====================================================
 # SPEECH ANALYSIS
-# =============================
+# =====================================================
 st.header("🎤 Speech Analysis")
 
 audio = audiorecorder("Start Recording", "Stop Recording")
@@ -65,7 +65,6 @@ if len(audio) > 0:
 
     st.audio(audio.export().read())
 
-    # save audio temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
         audio.export(f.name, format="wav")
         audio_path = f.name
@@ -81,17 +80,17 @@ if len(audio) > 0:
         prediction = speech_model.predict(mfcc)
 
         if prediction[0][0] > 0.5:
-            st.error("⚠️ Parkinson symptoms detected in speech")
+            st.error("⚠ Parkinson symptoms detected in speech")
         else:
             st.success("✅ Speech appears normal")
 
-# =============================
+# =====================================================
 # SPIRAL ANALYSIS
-# =============================
+# =====================================================
 st.header("🌀 Spiral Drawing Detection")
 
 spiral_file = st.file_uploader(
-    "Upload Spiral Drawing Image",
+    "Upload Spiral Image",
     type=["jpg", "jpeg", "png"],
     key="spiral"
 )
@@ -111,19 +110,19 @@ if spiral_file is not None:
         prediction = spiral_model.predict(img)
 
         if prediction[0][0] > 0.5:
-            st.error("⚠️ Parkinson symptoms detected in spiral drawing")
+            st.error("⚠ Parkinson symptoms detected in spiral drawing")
         else:
             st.success("✅ Spiral drawing appears normal")
 
-# =============================
+# =====================================================
 # HANDWRITING ANALYSIS
-# =============================
-st.header("✍️ Handwriting Detection")
+# =====================================================
+st.header("✍ Handwriting Analysis")
 
 hand_file = st.file_uploader(
     "Upload Handwriting Image",
     type=["jpg", "jpeg", "png"],
-    key="hand"
+    key="handwriting"
 )
 
 if hand_file is not None:
@@ -141,13 +140,12 @@ if hand_file is not None:
         prediction = handwriting_model.predict(img)
 
         if prediction[0][0] > 0.5:
-            st.error("⚠️ Parkinson symptoms detected in handwriting")
+            st.error("⚠ Parkinson symptoms detected in handwriting")
         else:
             st.success("✅ Handwriting appears normal")
 
-# =============================
+# ----------------------------
 # Footer
-# =============================
+# ----------------------------
 st.markdown("---")
 st.write("AI Parkinson Detection System | Multi-Modal Machine Learning")
-
