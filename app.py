@@ -8,9 +8,9 @@ import tensorflow as tf
 from PIL import Image
 from audiorecorder import audiorecorder
 
-# ----------------------------
-# Patch Dense layer to ignore quantization_config
-# ----------------------------
+# ---------------------------
+# Ignore quantization_config issue
+# ---------------------------
 from tensorflow.keras.layers import Dense as OriginalDense
 
 class PatchedDense(OriginalDense):
@@ -18,20 +18,22 @@ class PatchedDense(OriginalDense):
         kwargs.pop("quantization_config", None)
         super().__init__(*args, **kwargs)
 
-# ----------------------------
-# Page configuration
-# ----------------------------
+custom_objects = {"Dense": PatchedDense}
+
+# ---------------------------
+# Page setup
+# ---------------------------
 st.set_page_config(page_title="Parkinson Detection AI", layout="wide")
 
 st.title("🧠 AI-Based Parkinson’s Multi-Modal Detection System")
 st.write("Speech + Spiral + Handwriting Analysis")
 
-# Debug: show files available
+# Debug: show repo files
 st.write("Files available in repo:", os.listdir())
 
-# ----------------------------
-# Load models safely
-# ----------------------------
+# ---------------------------
+# Load models
+# ---------------------------
 @st.cache_resource
 def load_models():
 
@@ -39,13 +41,11 @@ def load_models():
     spiral_model = None
     handwriting_model = None
 
-    custom_objects = {"Dense": PatchedDense}
-
     try:
         speech_model = tf.keras.models.load_model(
             "fusion_model.h5",
-            custom_objects=custom_objects,
-            compile=False
+            compile=False,
+            custom_objects=custom_objects
         )
         st.success("Speech model loaded")
     except Exception as e:
@@ -54,8 +54,8 @@ def load_models():
     try:
         spiral_model = tf.keras.models.load_model(
             "spiral_model.h5",
-            custom_objects=custom_objects,
-            compile=False
+            compile=False,
+            custom_objects=custom_objects
         )
         st.success("Spiral model loaded")
     except Exception as e:
@@ -64,8 +64,8 @@ def load_models():
     try:
         handwriting_model = tf.keras.models.load_model(
             "handwriting_model.h5",
-            custom_objects=custom_objects,
-            compile=False
+            compile=False,
+            custom_objects=custom_objects
         )
         st.success("Handwriting model loaded")
     except Exception as e:
@@ -85,26 +85,33 @@ audio = audiorecorder("Start Recording", "Stop Recording")
 
 if len(audio) > 0:
 
-    st.audio(audio.export().read())
+    audio_bytes = audio.export().read()
+    st.audio(audio_bytes)
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-        audio.export(f.name, format="wav")
-        audio_path = f.name
+    try:
+        # create temp audio file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(audio_bytes)
+            audio_path = tmp.name
 
-    y, sr = librosa.load(audio_path, sr=22050)
+        # load audio
+        y, sr = librosa.load(audio_path, sr=22050)
 
-    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
-    mfcc = np.mean(mfcc.T, axis=0)
-    mfcc = np.expand_dims(mfcc, axis=0)
+        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
+        mfcc = np.mean(mfcc.T, axis=0)
+        mfcc = np.expand_dims(mfcc, axis=0)
 
-    if speech_model is not None:
+        if speech_model is not None:
 
-        prediction = speech_model.predict(mfcc)
+            prediction = speech_model.predict(mfcc)
 
-        if prediction[0][0] > 0.5:
-            st.error("⚠ Parkinson symptoms detected in speech")
-        else:
-            st.success("✅ Speech appears normal")
+            if prediction[0][0] > 0.5:
+                st.error("⚠ Parkinson symptoms detected in speech")
+            else:
+                st.success("✅ Speech appears normal")
+
+    except Exception as e:
+        st.error(f"Audio processing error: {e}")
 
 # =====================================================
 # SPIRAL ANALYSIS
@@ -118,22 +125,26 @@ spiral_file = st.file_uploader(
 
 if spiral_file is not None:
 
-    image = Image.open(spiral_file)
-    st.image(image)
+    try:
+        image = Image.open(spiral_file)
+        st.image(image)
 
-    img = np.array(image)
-    img = cv2.resize(img, (128,128))
-    img = img / 255.0
-    img = np.expand_dims(img, axis=0)
+        img = np.array(image)
+        img = cv2.resize(img, (128,128))
+        img = img / 255.0
+        img = np.expand_dims(img, axis=0)
 
-    if spiral_model is not None:
+        if spiral_model is not None:
 
-        prediction = spiral_model.predict(img)
+            prediction = spiral_model.predict(img)
 
-        if prediction[0][0] > 0.5:
-            st.error("⚠ Parkinson symptoms detected in spiral drawing")
-        else:
-            st.success("✅ Spiral drawing appears normal")
+            if prediction[0][0] > 0.5:
+                st.error("⚠ Parkinson symptoms detected in spiral")
+            else:
+                st.success("✅ Spiral looks normal")
+
+    except Exception as e:
+        st.error(f"Spiral processing error: {e}")
 
 # =====================================================
 # HANDWRITING ANALYSIS
@@ -142,30 +153,31 @@ st.header("✍ Handwriting Detection")
 
 hand_file = st.file_uploader(
     "Upload Handwriting Image",
-    type=["jpg","jpeg","png"]
+    type=["jpg", "jpeg", "png"]
 )
 
 if hand_file is not None:
 
-    image = Image.open(hand_file)
-    st.image(image)
+    try:
+        image = Image.open(hand_file)
+        st.image(image)
 
-    img = np.array(image)
-    img = cv2.resize(img,(128,128))
-    img = img / 255.0
-    img = np.expand_dims(img, axis=0)
+        img = np.array(image)
+        img = cv2.resize(img, (128,128))
+        img = img / 255.0
+        img = np.expand_dims(img, axis=0)
 
-    if handwriting_model is not None:
+        if handwriting_model is not None:
 
-        prediction = handwriting_model.predict(img)
+            prediction = handwriting_model.predict(img)
 
-        if prediction[0][0] > 0.5:
-            st.error("⚠ Parkinson symptoms detected in handwriting")
-        else:
-            st.success("✅ Handwriting appears normal")
+            if prediction[0][0] > 0.5:
+                st.error("⚠ Parkinson symptoms detected in handwriting")
+            else:
+                st.success("✅ Handwriting looks normal")
 
-# ----------------------------
-# Footer
-# ----------------------------
+    except Exception as e:
+        st.error(f"Handwriting processing error: {e}")
+
 st.markdown("---")
-st.write("AI Parkinson Detection System | Multi-Modal Machine Learning")
+st.write("AI Parkinson Detection System | Multi-Modal ML")
