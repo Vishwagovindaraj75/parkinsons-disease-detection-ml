@@ -1,8 +1,9 @@
 streamlit
-tensorflow
-keras
-opencv-python-headless
+tensorflow==2.13.0
+keras==2.13.1
 numpy
-pillow
+pandas
 scikit-learn
+opencv-python-headless
+pillow
 librosa
