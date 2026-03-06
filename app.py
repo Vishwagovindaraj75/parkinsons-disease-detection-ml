@@ -4,7 +4,7 @@ import cv2
 import librosa
 import os
 import tempfile
-from tensorflow.keras.models import load_model
+import tensorflow as tf
 from PIL import Image
 from audiorecorder import audiorecorder
 
@@ -17,12 +17,12 @@ st.title("🧠 AI-Based Parkinson’s Multi-Modal Detection System")
 st.write("Speech + Spiral + Handwriting Analysis")
 
 # ----------------------------
-# Show files in directory (debug)
+# Debug files in directory
 # ----------------------------
 st.write("Files available in repo:", os.listdir())
 
 # ----------------------------
-# Load models
+# Load models safely
 # ----------------------------
 @st.cache_resource
 def load_models():
@@ -32,22 +32,31 @@ def load_models():
     handwriting_model = None
 
     try:
-        speech_model = load_model("fusion_model.keras", compile=False)
+        speech_model = tf.keras.models.load_model(
+            "fusion_model.keras",
+            compile=False
+        )
         st.success("Speech model loaded")
     except Exception as e:
-        st.warning(f"Speech model error: {e}")
+        st.error(f"Speech model error: {e}")
 
     try:
-        spiral_model = load_model("spiral_model.h5", compile=False)
+        spiral_model = tf.keras.models.load_model(
+            "spiral_model.h5",
+            compile=False
+        )
         st.success("Spiral model loaded")
     except Exception as e:
-        st.warning(f"Spiral model error: {e}")
+        st.error(f"Spiral model error: {e}")
 
     try:
-        handwriting_model = load_model("handwriting_model.keras", compile=False)
+        handwriting_model = tf.keras.models.load_model(
+            "handwriting_model.keras",
+            compile=False
+        )
         st.success("Handwriting model loaded")
     except Exception as e:
-        st.warning(f"Handwriting model error: {e}")
+        st.error(f"Handwriting model error: {e}")
 
     return speech_model, spiral_model, handwriting_model
 
