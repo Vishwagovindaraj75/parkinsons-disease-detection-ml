@@ -1,7 +1,7 @@
 streamlit
-tensorflow-cpu==2.15.0
-keras==2.15.0
-numpy==1.26.4
+tensorflow==2.19.0
+keras
+numpy
 pandas
 opencv-python-headless
 scikit-learn
